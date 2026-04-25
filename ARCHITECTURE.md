@@ -4,18 +4,21 @@
 
 ```mermaid
 graph TD
+    %% User Layer
+    CLI[MineLink CLI] -->|Provision/Set Goals| Supervisor
+    Dashboard[Monitoring Dashboard] -->|Query Sync/Async| CrudSvc
+    Dashboard -->|Real-time Stream| OfficeBroker
+
+    %% Agent Hierarchy (C2)
+    DispatchAgent[Dispatch Optimization Agent] -->|Strategic Commands| Supervisor
+    Supervisor[Off-Site Supervisor Agent] -->|Tactical Assignments| Operators[Off-Site Operator Agents]
+    Operators -->|Telemetry Load| EdgeBroker1
+
     %% Edge 1 (Pit A)
     subgraph Edge_Site_1 [Edge Deployment 1: Pit A]
-        TruckSim1[Truck Simulator - Python/C++] -->|mTLS MQTT| EdgeBroker1[Edge MQTT Broker]
+        TruckSim1[Truck Simulator] -->|mTLS MQTT| EdgeBroker1[Edge MQTT Broker]
         EdgeBroker1 -->|Bridged Stream| OfficeBroker
         HealthCheck1[Dispatch & Health API - C#] -->|Subscribe| EdgeBroker1
-    end
-
-    %% Edge 2 (Pit B)
-    subgraph Edge_Site_2 [Edge Deployment 2: Pit B]
-        TruckSim2[Truck Simulator - Python/C++] -->|mTLS MQTT| EdgeBroker2[Edge MQTT Broker]
-        EdgeBroker2 -->|Bridged Stream| OfficeBroker
-        HealthCheck2[Dispatch & Health API - C#] -->|Subscribe| EdgeBroker2
     end
 
     %% Office / Static Deployment
@@ -32,6 +35,28 @@ graph TD
 
     %% Connections
     EdgeBroker1 -.->|In-Transit Encryption| OfficeBroker
-    EdgeBroker2 -.->|In-Transit Encryption| OfficeBroker
-    Users((Office & Field Users)) -->|HTTPS| CrudSvc
     CrudSvc -.->|Token Verification| AuthSvc
+```
+
+## 1. Hierarchical Command & Control (C2)
+MineLink utilizes a three-tier agent hierarchy to manage complex mining operations:
+*   **Strategic Layer (Dispatch):** Global optimization and high-level rerouting.
+*   **Orchestration Layer (Supervisor):** Translates strategy into tactical shifts and agent provisioning.
+*   **Execution Layer (Operators):** Direct equipment interaction and telemetry generation.
+
+## 2. User Interface: CLI & Dashboard
+The system replaces a traditional GUI with a two-pronged control plane:
+*   **MineLink CLI:** A high-performance interface for developers and operators to provision agents, set production goals via arguments, and trigger shift rotations.
+*   **Unified Dashboard:** A hybrid visualization tool that supports:
+    *   **Synchronous Monitoring:** Real-time telemetry streams via WebSockets/MQTT.
+    *   **Asynchronous Analytics:** Querying historical data and performance metrics from TimescaleDB.
+
+## 3. Temporal Simulation & State Persistence
+To simulate real-world mining cycles, the system implements:
+*   **Shift-Based Logic:** Operators work 8-hour shifts with mandatory hand-offs and state transitions.
+*   **Resource Depletion:** Real-time tracking of fuel, tire pressure, and mechanical health, requiring agents to proactively seek maintenance or refueling.
+*   **Load Generation:** Simulated operators provide stress testing for the ingestion pipeline, ensuring the office layer can handle high-frequency telemetry bursts.
+
+## 4. Encryption & Security
+*   **In-Transit:** All cluster communication is forced through mutual TLS (mTLS) via the service mesh.
+*   **At-Rest:** DB storage volumes use AES-256 block-level encryption.
