@@ -1,0 +1,139 @@
+asyncapi: 2.6.0
+info:
+  title: MineLink MQTT Messaging Contract
+  version: 1.0.0
+  description: Formal definition of MQTT topics and schemas for the Hybrid C2 mining simulation.
+
+servers:
+  edge-pit-a:
+    url: mqtt://edge-broker-1:1883
+    protocol: mqtt
+    description: Local Edge Broker at Pit A.
+  cloud-office:
+    url: mqtts://office-broker.minelink.io:8883
+    protocol: mqtts
+    description: Central Cloud Broker (Office).
+
+channels:
+  telemetry/truck/{vehicleId}/status:
+    parameters:
+      vehicleId:
+        schema:
+          type: string
+          description: Unique identifier for the vehicle (e.g., TRK-001).
+    publish:
+      summary: High-frequency telemetry from Simulator (Operator Agents).
+      message:
+        $ref: '#/components/messages/TelemetryStatus'
+
+  c2/strategy/dispatch:
+    subscribe:
+      summary: Global optimization goals broadcasted by the Cloud Dispatch Agent.
+      message:
+        $ref: '#/components/messages/DispatchStrategy'
+
+  c2/tactical/supervisor/{supervisorId}:
+    parameters:
+      supervisorId:
+        schema:
+          type: string
+          description: Unique identifier for the Supervisor Agent.
+    subscribe:
+      summary: Tactical assignments from Dispatch to specific Supervisors.
+      message:
+        $ref: '#/components/messages/TacticalAssignment'
+
+  c2/tactical/operator/{operatorId}:
+    parameters:
+      operatorId:
+        schema:
+          type: string
+          description: Unique identifier for the Operator Agent.
+    subscribe:
+      summary: Direct commands from Supervisor to Operator.
+      message:
+        $ref: '#/components/messages/OperatorCommand'
+
+components:
+  messages:
+    TelemetryStatus:
+      name: TelemetryStatus
+      title: Vehicle Status Update
+      payload:
+        type: object
+        properties:
+          vehicleId:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+          metrics:
+            type: object
+            properties:
+              fuelLevel:
+                type: number
+                minimum: 0
+                maximum: 100
+              engineTemp:
+                type: number
+              tirePressure:
+                type: number
+          currentTask:
+            type: string
+            enum: [HAUL_ORE, REFUEL, MAINTENANCE, IDLE]
+
+    DispatchStrategy:
+      name: DispatchStrategy
+      title: Global Production Intent
+      payload:
+        type: object
+        properties:
+          intentId:
+            type: string
+          targetThroughput:
+            type: number
+          priorityZones:
+            type: array
+            items:
+              type: string
+          timestamp:
+            type: string
+            format: date-time
+
+    TacticalAssignment:
+      name: TacticalAssignment
+      title: Supervisor Shift Directive
+      payload:
+        type: object
+        properties:
+          commandId:
+            type: string
+          supervisorId:
+            type: string
+          action:
+            type: string
+            enum: [SCALE_UP, SCALE_DOWN, ROTATE_SHIFTS]
+          parameters:
+            type: object
+            properties:
+              workerCount:
+                type: integer
+
+    OperatorCommand:
+      name: OperatorCommand
+      title: Direct Equipment Instruction
+      payload:
+        type: object
+        properties:
+          commandId:
+            type: string
+          operatorId:
+            type: string
+          action:
+            type: string
+            enum: [ASSIGN_ROUTE, EMERGENCY_STOP, REFUEL_NOW]
+          targetDestination:
+            type: object
+            properties:
+              lat: { type: number }
+              lon: { type: number }

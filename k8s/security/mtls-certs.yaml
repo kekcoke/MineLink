@@ -1,0 +1,52 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: minelink-selfsigned-issuer
+  namespace: minelink-system
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: edge-broker-tls
+  namespace: minelink-system
+spec:
+  secretName: edge-broker-tls-secret
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  subject:
+    organizations:
+      - bigfleet
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - edge-broker-1.minelink-system.svc.cluster.local
+  issuerRef:
+    name: minelink-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: agent-client-tls
+  namespace: minelink-system
+spec:
+  secretName: agent-client-tls-secret
+  isCA: false
+  usages:
+    - client auth
+  dnsNames:
+    - supervisor.minelink-system.svc.cluster.local
+    - operator.minelink-system.svc.cluster.local
+  issuerRef:
+    name: minelink-selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
