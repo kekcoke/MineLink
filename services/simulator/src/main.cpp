@@ -3,6 +3,8 @@
 #include <iostream>
 #include <thread>
 #include <csignal>
+#include <cstdlib>
+#include <string>
 
 bool g_running = true;
 
@@ -16,7 +18,19 @@ int main() {
     std::signal(SIGTERM, signal_handler);
 
     std::string brokerUrl = "tcp://localhost:1883";
-    std::vector<std::string> truckIds = {"TRK-001", "TRK-002", "TRK-003", "TRK-004", "TRK-005"};
+    
+    // Support dynamic fleet sizing for stress testing
+    int fleetSize = 5; // Default size
+    if (const char* env_p = std::getenv("FLEET_SIZE")) {
+        fleetSize = std::atoi(env_p);
+        if (fleetSize <= 0) fleetSize = 5;
+    }
+
+    std::vector<std::string> truckIds;
+    for (int i = 1; i <= fleetSize; ++i) {
+        std::string id = "TRK-" + std::string(3 - std::to_string(i).length(), '0') + std::to_string(i);
+        truckIds.push_back(id);
+    }
     
     std::vector<std::unique_ptr<minelink::OperatorAgent>> agents;
 
@@ -42,3 +56,4 @@ int main() {
     std::cout << "Simulation terminated gracefully." << std::endl;
     return 0;
 }
+
