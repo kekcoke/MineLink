@@ -1,0 +1,24 @@
+# Values for bitnami/redis (Edge Deployment)
+architecture: standalone
+auth:
+  enabled: false # Handled via NetworkPolicies and mTLS
+
+master:
+  persistence:
+    enabled: true
+    size: 5Gi
+  
+  # Enable Append Only File (AOF) for crash recovery
+  configuration: |
+    appendonly yes
+    appendfsync everysec
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 2Gi
