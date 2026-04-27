@@ -4,47 +4,46 @@
 
 ```mermaid
 graph TD
-    graph TD
-        %% User Layer
-        CLI[MineLink CLI] -->|Provision/Set Goals| DispatchAgent
-        Dashboard[Monitoring Dashboard] -->|Provision/Set Goals| DispatchAgent
-        Dashboard -->|Query Sync/Async| CrudSvc
-        Dashboard -->|Real-time Stream| OfficeBroker
+    %% User Layer
+    CLI[MineLink CLI] -->|Provision/Set Goals| DispatchAgent
+    Dashboard[Monitoring Dashboard] -->|Provision/Set Goals| DispatchAgent
+    Dashboard -->|Query Sync/Async| CrudSvc
+    Dashboard -->|Real-time Stream| OfficeBroker
 
-        %% Agent Hierarchy (C2)
-        DispatchAgent[Dispatch Optimization Agent - C#] -->|Strategic Commands| Supervisor
-        Supervisor[Supervisor Agent - Go] -->|Tactical Assignments| Operators[Operator Agents - C++]
-        Operators -->|Telemetry Load| EdgeBroker1
+    %% Agent Hierarchy (C2)
+    DispatchAgent[Dispatch Optimization Agent - C#] -->|Strategic Commands| Supervisor
+    Supervisor[Supervisor Agent - Go] -->|Tactical Assignments| Operators[Operator Agents - C++]
+    Operators -->|Telemetry Load| EdgeBroker1
 
-        %% Edge 1 (Pit A)
-        subgraph Edge_Site_1 [Edge Deployment 1: Pit A]
-            Supervisor
-            Operators
-            EdgeBroker1[Edge MQTT Broker]
-            Redis[(Edge Redis - State)]
+    %% Edge 1 (Pit A)
+    subgraph Edge_Site_1 [Edge Deployment 1: Pit A]
+        Supervisor
+        Operators
+        EdgeBroker1[Edge MQTT Broker]
+        Redis[(Edge Redis - State)]
 
-            Operators <--> Redis
-            Supervisor <--> Redis
-            EdgeBroker1 -->|Bridged Stream| OfficeBroker
-        end
+        Operators <--> Redis
+        Supervisor <--> Redis
+        EdgeBroker1 -->|Bridged Stream| OfficeBroker
+    end
 
-        %% Office / Static Deployment
-        subgraph Static_Office [Static Deployment: Cloud/HQ]
-            DispatchAgent
-            OfficeBroker[Central Message Bus]
-            AuthSvc[Auth Service - Go]
-            CrudSvc[CRUD API - C#]
-            DB[(PostgreSQL + TimescaleDB)]
+    %% Office / Static Deployment
+    subgraph Static_Office [Static Deployment: Cloud/HQ]
+        DispatchAgent
+        OfficeBroker[Central Message Bus]
+        AuthSvc[Auth Service - Go]
+        CrudSvc[CRUD API - C#]
+        DB[(PostgreSQL + TimescaleDB)]
 
-            CrudSvc --> DB
-            AuthSvc --> DB
-            OfficeBroker --> CrudSvc
-        end
+        CrudSvc --> DB
+        AuthSvc --> DB
+        OfficeBroker --> CrudSvc
+    end
 
-        %% Connections
-        EdgeBroker1 -.->|In-Transit Encryption| OfficeBroker
-        CrudSvc -.->|Token Verification| AuthSvc
-
+    %% Connections
+    EdgeBroker1 -.->|In-Transit Encryption| OfficeBroker
+    CrudSvc -.->|Token Verification| AuthSvc
+```
     ## 1. Hierarchical Command & Control (C2)
     MineLink utilizes a three-tier agent hierarchy across a hybrid topology:
     *   **Strategic Layer (Dispatch - Cloud):** Global optimization and high-level rerouting, written in C#. Resides in the cloud for global visibility.
