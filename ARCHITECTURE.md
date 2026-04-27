@@ -4,50 +4,58 @@
 
 ```mermaid
 graph TD
-    %% User Layer
-    CLI[MineLink CLI] -->|Provision/Set Goals| Supervisor
-    Dashboard[Monitoring Dashboard] -->|Query Sync/Async| CrudSvc
-    Dashboard -->|Real-time Stream| OfficeBroker
+    graph TD
+        %% User Layer
+        CLI[MineLink CLI] -->|Provision/Set Goals| DispatchAgent
+        Dashboard[Monitoring Dashboard] -->|Provision/Set Goals| DispatchAgent
+        Dashboard -->|Query Sync/Async| CrudSvc
+        Dashboard -->|Real-time Stream| OfficeBroker
 
-    %% Agent Hierarchy (C2)
-    DispatchAgent[Dispatch Optimization Agent] -->|Strategic Commands| Supervisor
-    Supervisor[Off-Site Supervisor Agent] -->|Tactical Assignments| Operators[Off-Site Operator Agents]
-    Operators -->|Telemetry Load| EdgeBroker1
+        %% Agent Hierarchy (C2)
+        DispatchAgent[Dispatch Optimization Agent - C#] -->|Strategic Commands| Supervisor
+        Supervisor[Supervisor Agent - Go] -->|Tactical Assignments| Operators[Operator Agents - C++]
+        Operators -->|Telemetry Load| EdgeBroker1
 
-    %% Edge 1 (Pit A)
-    subgraph Edge_Site_1 [Edge Deployment 1: Pit A]
-        TruckSim1[Truck Simulator] -->|mTLS MQTT| EdgeBroker1[Edge MQTT Broker]
-        EdgeBroker1 -->|Bridged Stream| OfficeBroker
-        HealthCheck1[Dispatch & Health API - C#] -->|Subscribe| EdgeBroker1
-    end
+        %% Edge 1 (Pit A)
+        subgraph Edge_Site_1 [Edge Deployment 1: Pit A]
+            Supervisor
+            Operators
+            EdgeBroker1[Edge MQTT Broker]
+            Redis[(Edge Redis - State)]
 
-    %% Office / Static Deployment
-    subgraph Static_Office [Static Deployment: Cloud/HQ]
-        OfficeBroker[Central Message Bus]
-        AuthSvc[Auth Service - Go]
-        CrudSvc[CRUD API - C#]
-        DB[(PostgreSQL + TimescaleDB)]
-        
-        CrudSvc --> DB
-        AuthSvc --> DB
-        OfficeBroker --> CrudSvc
-    end
+            Operators <--> Redis
+            Supervisor <--> Redis
+            EdgeBroker1 -->|Bridged Stream| OfficeBroker
+        end
 
-    %% Connections
-    EdgeBroker1 -.->|In-Transit Encryption| OfficeBroker
-    CrudSvc -.->|Token Verification| AuthSvc
-```
+        %% Office / Static Deployment
+        subgraph Static_Office [Static Deployment: Cloud/HQ]
+            DispatchAgent
+            OfficeBroker[Central Message Bus]
+            AuthSvc[Auth Service - Go]
+            CrudSvc[CRUD API - C#]
+            DB[(PostgreSQL + TimescaleDB)]
 
-## 1. Hierarchical Command & Control (C2)
-MineLink utilizes a three-tier agent hierarchy to manage complex mining operations:
-*   **Strategic Layer (Dispatch):** Global optimization and high-level rerouting.
-*   **Orchestration Layer (Supervisor):** Translates strategy into tactical shifts and agent provisioning.
-*   **Execution Layer (Operators):** Direct equipment interaction and telemetry generation.
+            CrudSvc --> DB
+            AuthSvc --> DB
+            OfficeBroker --> CrudSvc
+        end
+
+        %% Connections
+        EdgeBroker1 -.->|In-Transit Encryption| OfficeBroker
+        CrudSvc -.->|Token Verification| AuthSvc
+
+    ## 1. Hierarchical Command & Control (C2)
+    MineLink utilizes a three-tier agent hierarchy across a hybrid topology:
+    *   **Strategic Layer (Dispatch - Cloud):** Global optimization and high-level rerouting, written in C#. Resides in the cloud for global visibility.
+    *   **Orchestration Layer (Supervisor - Edge):** Translates strategy into tactical shifts and agent provisioning, written in Go. Resides at the edge to ensure local autonomy.
+    *   **Execution Layer (Operators - Edge):** Simulated digital workers (C++) spawned as lightweight threads within the Simulator process. Directly manages equipment telemetry.
 
 ## 2. User Interface: CLI & Dashboard
-The system replaces a traditional GUI with a two-pronged control plane:
-*   **MineLink CLI:** A high-performance interface for developers and operators to provision agents, set production goals via arguments, and trigger shift rotations.
-*   **Unified Dashboard:** A hybrid visualization tool that supports:
+The system utilizes a two-pronged control plane designed for both high-speed orchestration and visual management:
+*   **MineLink CLI:** A high-performance interface for developers and operators to provision agents, set production goals via arguments, and trigger shift rotations programmatically.
+*   **Unified Dashboard:** A hybrid management and visualization tool that supports:
+    *   **GUI Form Controls:** Interactive forms for visual agent provisioning, goal setting, and shift overrides, complementing the CLI for non-technical operators.
     *   **Synchronous Monitoring:** Real-time telemetry streams via WebSockets/MQTT.
     *   **Asynchronous Analytics:** Querying historical data and performance metrics from TimescaleDB.
 

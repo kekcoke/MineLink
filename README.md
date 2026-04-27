@@ -5,8 +5,9 @@ It also demonstrates simulative adaptability akin to a game.
 
 ## Project Structure
 * `/services/auth`: Go-based identity and access management.
-* `/services/simulator`: C++/Python mock telemetry generator.
-* `/services/dispatch`: C# service for real-time edge processing.
+* `/services/simulator`: C++ Operator Agents (simulating digital workers).
+* `/services/supervisor`: Go-based Orchestration Agent (running at the edge).
+* `/services/dispatch`: C# Dispatch Optimization Agent (running in the cloud).
 * `/services/crud`: C# service for fleet configurations and data access.
 * `/k8s`: Kubernetes deployment manifests.
 
