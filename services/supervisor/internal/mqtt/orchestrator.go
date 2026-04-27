@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/kekcoke/minelink/supervisor/internal/state"
@@ -31,13 +32,24 @@ func NewOrchestrator(brokerURL, clientID string, s *state.SupervisorState) (*Orc
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(brokerURL)
 	opts.SetClientID(clientID)
-	
-	// Basic TLS config could be added here for mTLS
+	opts.SetAutoReconnect(true)
+	opts.SetConnectRetry(true)
+	opts.SetConnectRetryInterval(5 * time.Second)
+
+	opts.OnConnect = func(c mqtt.Client) {
+		log.Printf("Supervisor client [%s] connected/reconnected to broker\n", clientID)
+	}
+	opts.OnConnectionLost = func(c mqtt.Client, err error) {
+		log.Printf("Supervisor client [%s] lost connection: %v\n", clientID, err)
+	}
 
 	client := mqtt.NewClient(opts)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
-	}
+	// We allow the service to start even if the broker is down initially
+	go func() {
+		if token := client.Connect(); token.Wait() && token.Error() != nil {
+			log.Printf("Initial connection to broker failed (will retry): %v\n", token.Error())
+		}
+	}()
 
 	return &Orchestrator{
 		client: client,
@@ -45,6 +57,7 @@ func NewOrchestrator(brokerURL, clientID string, s *state.SupervisorState) (*Orc
 		id:     strings.TrimPrefix(clientID, "supervisor-"),
 	}, nil
 }
+
 
 func (o *Orchestrator) Start(ctx context.Context) error {
 	topic := fmt.Sprintf("c2/tactical/supervisor/%s", o.id)
